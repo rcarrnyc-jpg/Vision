@@ -30,6 +30,8 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>(seeded);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [executiveInsight, setExecutiveInsight] = useState('OpenAI bridge is ready for credentials. Until connected, CODE JJ uses the local simulation planner.');
+  const [brainMode, setBrainMode] = useState<'SIMULATION' | 'OPENAI_ASSISTED' | 'SIMULATION_FALLBACK'>('SIMULATION');
 
   const waiting = useMemo(() => tasks.filter((t) => t.status === 'WAITING_APPROVAL').length, [tasks]);
   const completed = useMemo(() => tasks.filter((t) => t.status === 'COMPLETED').length, [tasks]);
@@ -46,6 +48,9 @@ export default function Home() {
       });
       const data = await response.json();
       if (Array.isArray(data.tasks)) setTasks((old) => [...data.tasks, ...old]);
+      if (typeof data.executiveInsight === 'string') setExecutiveInsight(data.executiveInsight);
+      if (data.mode === 'OPENAI_ASSISTED' || data.mode === 'SIMULATION_FALLBACK') setBrainMode(data.mode);
+      else setBrainMode('SIMULATION');
       setCommand('');
     } finally {
       setBusy(false);
@@ -118,10 +123,19 @@ export default function Home() {
         </div>
 
         <section className="commandCard panel">
-          <div className="eyebrow">EXECUTIVE AGENT</div>
+          <div className="commandHead">
+            <div className="eyebrow">EXECUTIVE AGENT</div>
+            <span className={`brainBadge ${brainMode === 'OPENAI_ASSISTED' ? 'live' : ''}`}>
+              {brainMode === 'OPENAI_ASSISTED' ? 'OPENAI LIVE' : brainMode.replace('_', ' ')}
+            </span>
+          </div>
           <textarea value={command} onChange={(e) => setCommand(e.target.value)} placeholder="What do you want accomplished?" />
+          <div className="insightBox">
+            <span>EXECUTIVE INSIGHT</span>
+            <p>{executiveInsight}</p>
+          </div>
           <div className="commandActions">
-            <span className="demoBadge">SIMULATION MODE</span>
+            <span className="demoBadge">{brainMode === 'OPENAI_ASSISTED' ? 'OPENAI CONNECTED' : 'SAFE FALLBACK READY'}</span>
             <button className="primary" onClick={runCommand} disabled={busy}>{busy ? 'Planning…' : 'Run Goal'}</button>
           </div>
         </section>
